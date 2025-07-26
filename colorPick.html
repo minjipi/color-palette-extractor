@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Color Palette Extractor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bitcount:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Bitcount', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FCFCFC;
+            min-height: 100vh;
+            color: #333;
+            transition: background 2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.extracted {
+            background: var(--extracted-gradient);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 1s ease;
+            font-family: 'Bitcount', 'Inter', monospace;
+        }
+
+        body.extracted .header h1 {
+            text-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        }
+
+        .header p {
+            color: #374151;
+            font-size: 1.1rem;
+            transition: all 1s ease;
+        }
+
+        body.extracted .header p {
+            color: #374151;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .language-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .language-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            transition: all 1s ease;
+        }
+
+        body.extracted .main-card {
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+
+        .upload-area {
+            border: 3px dashed #d1d5db;
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f0f0f0;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: #6b7280;
+            background: #e5e7eb;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .upload-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #374151;
+        }
+
+        .upload-subtext {
+            color: #6b7280;
+            margin-bottom: 25px;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 41, 55, 0.3);
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .image-container {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .extract-btn {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .extract-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 41, 55, 0.3);
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+
+        .extract-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .color-count-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 10px 16px;
+            border-radius: 10px;
+        }
+
+        .color-count-control label {
+            font-weight: 500;
+            color: #475569;
+        }
+
+        .color-count-control select {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 1rem;
+            background: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .analysis-info {
+            display: none !important;
+        }
+
+        .palette-section {
+            display: none;
+        }
+
+        .palette-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #1f2937;
+        }
+
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .color-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .color-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .color-swatch {
+            height: 120px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .color-info {
+            padding: 15px;
+            background: white;
+        }
+
+        .color-hex {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .color-rgb {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 3px;
+        }
+
+        .color-hsv {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .palette-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .copy-all-btn {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            color: white;
+        }
+
+        .copy-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(75, 85, 99, 0.3);
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3);
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        }
+
+        .saved-palettes {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .saved-palettes.show {
+            display: block;
+        }
+
+        .saved-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .saved-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .saved-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .saved-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .saved-colors {
+            display: flex;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .saved-color {
+            flex: 1;
+        }
+
+        .saved-date {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .saved-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: 500;
+            transform: translateX(400px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            font-size: 0.95rem;
+            max-width: 300px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            color: #166534;
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            color: #991b1b;
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1e40af;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .main-card {
+                padding: 20px;
+            }
+
+            .upload-area {
+                padding: 40px 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .palette {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+            }
+
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                transform: translateY(-100px);
+            }
+
+            .notification.show {
+                transform: translateY(0);
+            }
+
+            .language-toggle {
+                position: relative;
+                margin-bottom: 20px;
+                display: inline-block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="language-toggle" onclick="toggleLanguage()">
+                <span id="langToggleText">한국어</span>
+            </button>
+            <h1 id="mainTitle">color palette extractor</h1>
+            <p id="mainSubtitle">Extract beautiful color palettes from any image using advanced algorithms</p>
+        </div>
+
+        <div class="main-card">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text" id="uploadText">Upload Your Image</div>
+                <div class="upload-subtext" id="uploadSubtext">Drag & drop a PNG or JPG image here, or click to browse</div>
+                <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+                    Choose Image
+                </button>
+                <input type="file" id="fileInput" accept="image/png,image/jpg,image/jpeg">
+            </div>
+
+            <div class="preview-section" id="previewSection">
+                <div class="image-container">
+                    <img id="imagePreview" class="image-preview" alt="Preview">
+                </div>
+
+                <div class="controls">
+                    <button class="extract-btn" id="extractBtn">🎯 <span id="extractText">Extract Colors</span></button>
+                    <div class="color-count-control">
+                        <label for="colorCount" id="colorsLabel">Colors:</label>
+                        <select id="colorCount">
+                            <option value="3">3</option>
+                            <option value="5" selected>5</option>
+                            <option value="8">8</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div id="loadingText">Analyzing image with advanced algorithms...</div>
+            </div>
+
+            <div class="palette-section" id="paletteSection">
+                <h2 class="palette-title">🌈 <span id="paletteTitle">Extracted Palette</span></h2>
+                <div class="palette" id="palette">
+                    <!-- Color cards will be inserted here -->
+                </div>
+                <div class="palette-actions">
+                    <button class="action-btn copy-all-btn" onclick="copyAllColors()">
+                        📋 <span id="copyAllText">Copy All</span>
+                    </button>
+                    <button class="action-btn save-btn" onclick="savePalette()">
+                        💾 <span id="saveText">Save Palette</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="saved-palettes" id="savedPalettes">
+                <h3 class="saved-title">💾 <span id="savedTitle">Saved Palettes</span></h3>
+                <div class="saved-grid" id="savedGrid">
+                    <!-- Saved palettes will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Language translations
+        const translations = {
+            en: {
+                mainTitle: "color palette extractor",
+                mainSubtitle: "Extract colors from your favorite images!",
+                uploadText: "Upload Your Image",
+                uploadSubtext: "Drag & drop a PNG or JPG image here, or click to browse",
+                uploadBtn: "Choose Image",
+                extractText: "Extract Colors",
+                colorsLabel: "Colors:",
+                loadingText: "Analyzing image with advanced algorithms...",
+                paletteTitle: "Extracted Palette",
+                copyAllText: "Copy All",
+                saveText: "Save Palette",
+                savedTitle: "Saved Palettes",
+                langToggleText: "한국어",
+
+                // Notifications
+                imageLoadSuccess: "Image loaded successfully!",
+                pngJpgOnly: "Please select a PNG or JPG image file only!",
+                fileTooLarge: "File size too large. Please select an image under 10MB.",
+                noFiles: "No files detected. Please try again.",
+                fileReadError: "Error reading file. Please try again.",
+                analysisError: "Error analyzing image. Please try again.",
+                colorCopied: "Copied {color} to clipboard!",
+                allColorsCopied: "Copied all {count} colors to clipboard!",
+                paletteSaved: "Palette saved successfully!",
+                paletteAlreadyExists: "This palette is already saved!",
+                paletteLoaded: "Palette loaded!",
+                paletteRemoved: "Palette removed",
+
+                // Analysis info
+                analysisTitle: "Analysis Results:",
+                sampledPixels: "Sampled {count} pixels (step: {step})",
+                validPixels: "Found {count} valid pixels",
+                uniqueColors: "Identified {count} unique color clusters",
+                clusteringApplied: "Applied K-means clustering for optimal color selection"
+            },
+            ko: {
+                mainTitle: "color palette extractor",
+                mainSubtitle: "마음에 드는 이미지에 사용된 색상을 추출해 보세요!",
+                uploadText: "이미지 업로드",
+                uploadSubtext: "PNG 또는 JPG 이미지를 여기에 드래그 앤 드롭하거나 클릭하여 찾아보세요",
+                uploadBtn: "이미지 선택",
+                extractText: "색상 추출",
+                colorsLabel: "색상 개수:",
+                loadingText: "고급 알고리즘으로 이미지를 분석하고 있습니다...",
+                paletteTitle: "추출된 팔레트",
+                copyAllText: "모두 복사",
+                saveText: "팔레트 저장",
+                savedTitle: "저장된 팔레트",
+                langToggleText: "English",
+
+                // Notifications
+                imageLoadSuccess: "이미지가 성공적으로 로드되었습니다!",
+                pngJpgOnly: "PNG 또는 JPG 이미지 파일만 선택해주세요!",
+                fileTooLarge: "파일 크기가 너무 큽니다. 10MB 이하의 이미지를 선택해주세요.",
+                noFiles: "파일이 감지되지 않았습니다. 다시 시도해주세요.",
+                fileReadError: "파일 읽기 오류입니다. 다시 시도해주세요.",
+                analysisError: "이미지 분석 오류입니다. 다시 시도해주세요.",
+                colorCopied: "{color}이(가) 클립보드에 복사되었습니다!",
+                allColorsCopied: "모든 {count}개 색상이 클립보드에 복사되었습니다!",
+                paletteSaved: "팔레트가 성공적으로 저장되었습니다!",
+                paletteAlreadyExists: "이 팔레트는 이미 저장되어 있습니다!",
+                paletteLoaded: "팔레트가 로드되었습니다!",
+                paletteRemoved: "팔레트가 제거되었습니다",
+
+                // Analysis info
+                analysisTitle: "분석 결과:",
+                sampledPixels: "{count}개 픽셀 샘플링 (단계: {step})",
+                validPixels: "{count}개의 유효한 픽셀 발견",
+                uniqueColors: "{count}개의 고유한 색상 클러스터 식별",
+                clusteringApplied: "최적의 색상 선택을 위한 K-평균 클러스터링 적용"
+            }
+        };
+
+        // Language management
+        let currentLanguage = 'en';
+
+        // Detect user's language
+        function detectLanguage() {
+            const browserLang = navigator.language || navigator.userLanguage;
+            const savedLang = localStorage.getItem('colorExtractorLanguage');
+
+            if (savedLang) {
+                return savedLang;
+            }
+
+            // Check if browser language is Korean
+            if (browserLang.startsWith('ko')) {
+                return 'ko';
+            }
+
+            return 'en'; // Default to English
+        }
+
+        function updateText(key, placeholders = {}) {
+            let text = translations[currentLanguage][key] || translations.en[key] || key;
+
+            // Replace placeholders
+            Object.keys(placeholders).forEach(placeholder => {
+                text = text.replace(`{${placeholder}}`, placeholders[placeholder]);
+            });
+
+            return text;
+        }
+
+        function updateAllTexts() {
+            // Update all text elements
+            document.getElementById('mainTitle').textContent = updateText('mainTitle');
+            document.getElementById('mainSubtitle').textContent = updateText('mainSubtitle');
+            document.getElementById('uploadText').textContent = updateText('uploadText');
+            document.getElementById('uploadSubtext').textContent = updateText('uploadSubtext');
+            document.getElementById('uploadBtn').textContent = updateText('uploadBtn');
+            document.getElementById('extractText').textContent = updateText('extractText');
+            document.getElementById('colorsLabel').textContent = updateText('colorsLabel');
+            document.getElementById('loadingText').textContent = updateText('loadingText');
+            document.getElementById('paletteTitle').textContent = updateText('paletteTitle');
+            document.getElementById('copyAllText').textContent = updateText('copyAllText');
+            document.getElementById('saveText').textContent = updateText('saveText');
+            document.getElementById('savedTitle').textContent = updateText('savedTitle');
+            document.getElementById('langToggleText').textContent = updateText('langToggleText');
+
+            // Update document language
+            document.documentElement.lang = currentLanguage;
+        }
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ko' : 'en';
+            localStorage.setItem('colorExtractorLanguage', currentLanguage);
+            updateAllTexts();
+        }
+
+        // Rest of the original JavaScript code...
+        let currentPalette = [];
+        let currentPaletteData = [];
+        let savedPalettes = JSON.parse(localStorage.getItem('colorPalettes') || '[]');
+
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const previewSection = document.getElementById('previewSection');
+        const imagePreview = document.getElementById('imagePreview');
+        const extractBtn = document.getElementById('extractBtn');
+        const loading = document.getElementById('loading');
+        const analysisInfo = document.getElementById('analysisInfo');
+        const paletteSection = document.getElementById('paletteSection');
+        const palette = document.getElementById('palette');
+        const savedPalettes_div = document.getElementById('savedPalettes');
+
+        // File handling with improved drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (!uploadArea.contains(e.relatedTarget)) {
+                uploadArea.classList.remove('dragover');
+            }
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            } else {
+                showNotification(updateText('noFiles'), 'error');
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+        });
+
+        uploadArea.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('upload-btn')) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const allowedTypes = ['image/png', 'image/jpg', 'image/jpeg'];
+            if (!allowedTypes.includes(file.type.toLowerCase())) {
+                showNotification(updateText('pngJpgOnly'), 'error');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showNotification(updateText('fileTooLarge'), 'error');
+                return;
+            }
+
+            resetBackground();
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                previewSection.style.display = 'block';
+                paletteSection.style.display = 'none';
+                showNotification(`${updateText('imageLoadSuccess')} (${(file.size / 1024).toFixed(1)}KB)`);
+            };
+            reader.onerror = () => {
+                showNotification(updateText('fileReadError'), 'error');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        extractBtn.addEventListener('click', extractColors);
+
+        function extractColors() {
+            loading.classList.add('show');
+            extractBtn.disabled = true;
+
+            setTimeout(() => {
+                analyzeImage();
+            }, 500);
+        }
+
+        function analyzeImage() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = () => {
+                const maxSize = 400;
+                const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const colorCount = parseInt(document.getElementById('colorCount').value);
+                    const result = extractDominantColors(imageData, colorCount);
+
+                    currentPalette = result.colors;
+                    currentPaletteData = result.colorData;
+
+                    displayPalette(result.colorData);
+
+                    loading.classList.remove('show');
+                    extractBtn.disabled = false;
+                    paletteSection.style.display = 'block';
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification(updateText('analysisError'), 'error');
+                    loading.classList.remove('show');
+                    extractBtn.disabled = false;
+                }
+            };
+
+            img.crossOrigin = 'anonymous';
+            img.src = imagePreview.src;
+        }
+
+        function extractDominantColors(imageData, targetColors = 5) {
+            const data = imageData.data;
+            const pixelCount = Math.floor(data.length / 4);
+            const colorCount = {};
+
+            let step = Math.max(1, Math.floor(pixelCount / 20000));
+            if (step > 4) step = 4;
+
+            let sampledPixels = 0;
+            let validPixels = 0;
+
+            for (let i = 0; i < data.length; i += step * 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const alpha = data[i + 3];
+
+                sampledPixels++;
+
+                if (alpha < 200) continue;
+
+                validPixels++;
+
+                const rReduced = Math.floor(r / 4) * 4;
+                const gReduced = Math.floor(g / 4) * 4;
+                const bReduced = Math.floor(b / 4) * 4;
+
+                const key = `${rReduced},${gReduced},${bReduced}`;
+                colorCount[key] = (colorCount[key] || 0) + 1;
+            }
+
+            const sortedColors = Object.entries(colorCount)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, Math.min(50, Object.keys(colorCount).length))
+                .map(([color, count]) => {
+                    const [r, g, b] = color.split(',').map(Number);
+                    return { r, g, b, count };
+                });
+
+            const finalColors = improvedColorClustering(sortedColors, targetColors);
+
+            const colors = [];
+            const colorData = [];
+
+            finalColors.forEach(color => {
+                const r = Math.round(color.r);
+                const g = Math.round(color.g);
+                const b = Math.round(color.b);
+
+                const hex = rgbToHex(r, g, b);
+                const hsv = rgbToHsv(r, g, b);
+
+                colors.push(hex);
+                colorData.push({
+                    hex: hex,
+                    rgb: `rgb(${r}, ${g}, ${b})`,
+                    hsv: `hsv(${Math.round(hsv.h)}, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%)`,
+                    r, g, b
+                });
+            });
+
+            return {
+                colors,
+                colorData,
+                analysisInfo: {
+                    sampledPixels,
+                    validPixels,
+                    uniqueColors: Object.keys(colorCount).length,
+                    step
+                }
+            };
+        }
+
+        function improvedColorClustering(colors, k) {
+            if (colors.length <= k) {
+                return colors.map(c => ({ r: c.r, g: c.g, b: c.b }));
+            }
+
+            let centroids = colors.slice(0, k).map(c => ({ r: c.r, g: c.g, b: c.b }));
+
+            for (let iter = 0; iter < 5; iter++) {
+                const clusters = Array(k).fill().map(() => []);
+
+                colors.forEach(color => {
+                    let minDistance = Infinity;
+                    let closestCentroid = 0;
+
+                    centroids.forEach((centroid, i) => {
+                        const distance = perceptualColorDistance(color, centroid);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestCentroid = i;
+                        }
+                    });
+
+                    clusters[closestCentroid].push(color);
+                });
+
+                const newCentroids = clusters.map((cluster, idx) => {
+                    if (cluster.length === 0) return centroids[idx];
+
+                    const sortedCluster = cluster.sort((a, b) => b.count - a.count);
+                    const dominantColor = sortedCluster[0];
+
+                    let totalWeight = 0;
+                    let weightedR = 0, weightedG = 0, weightedB = 0;
+
+                    cluster.forEach(color => {
+                        const weight = Math.sqrt(color.count || 1);
+                        totalWeight += weight;
+                        weightedR += color.r * weight;
+                        weightedG += color.g * weight;
+                        weightedB += color.b * weight;
+                    });
+
+                    const avgR = weightedR / totalWeight;
+                    const avgG = weightedG / totalWeight;
+                    const avgB = weightedB / totalWeight;
+
+                    return {
+                        r: avgR * 0.7 + dominantColor.r * 0.3,
+                        g: avgG * 0.7 + dominantColor.g * 0.3,
+                        b: avgB * 0.7 + dominantColor.b * 0.3
+                    };
+                });
+
+                const converged = centroids.every((centroid, i) =>
+                    perceptualColorDistance(centroid, newCentroids[i]) < 3
+                );
+
+                centroids = newCentroids;
+                if (converged) break;
+            }
+
+            return centroids;
+        }
+
+        function perceptualColorDistance(color1, color2) {
+            const dr = color1.r - color2.r;
+            const dg = color1.g - color2.g;
+            const db = color1.b - color2.b;
+
+            const rWeight = 0.299;
+            const gWeight = 0.587;
+            const bWeight = 0.114;
+
+            return Math.sqrt(rWeight * dr * dr + gWeight * dg * dg + bWeight * db * db);
+        }
+
+        function rgbToHex(r, g, b) {
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const diff = max - min;
+
+            let h = 0;
+            if (diff !== 0) {
+                if (max === r) h = ((g - b) / diff) % 6;
+                else if (max === g) h = (b - r) / diff + 2;
+                else h = (r - g) / diff + 4;
+            }
+            h = Math.round(h * 60);
+            if (h < 0) h += 360;
+
+            const s = max === 0 ? 0 : diff / max;
+            const v = max;
+
+            return { h, s: s * 100, v: v * 100 };
+        }
+
+        function displayPalette(colorData) {
+            palette.innerHTML = '';
+
+            updateBackgroundGradient(colorData);
+
+            colorData.forEach((color, index) => {
+                const colorCard = document.createElement('div');
+                colorCard.className = 'color-card';
+                colorCard.onclick = () => copyColor(color.hex, colorCard);
+
+                colorCard.innerHTML = `
+                    <div class="color-swatch" style="background-color: ${color.hex}"></div>
+                    <div class="color-info">
+                        <div class="color-hex">${color.hex.toUpperCase()}</div>
+                        <div class="color-rgb">${color.rgb}</div>
+                        <div class="color-hsv">${color.hsv}</div>
+                    </div>
+                `;
+
+                palette.appendChild(colorCard);
+            });
+        }
+
+        function updateBackgroundGradient(colorData) {
+            if (colorData.length === 0) return;
+
+            let gradientColors = [];
+
+            if (colorData.length === 1) {
+                const color = colorData[0];
+                const lighterColor = lightenColor(color.hex, 20);
+                const darkerColor = darkenColor(color.hex, 15);
+                gradientColors = [lighterColor, color.hex, darkerColor];
+            } else if (colorData.length === 2) {
+                gradientColors = [colorData[0].hex, colorData[1].hex];
+            } else {
+                gradientColors = colorData.slice(0, 4).map(c => c.hex);
+            }
+
+            const gradientStops = gradientColors.map((color, index) => {
+                const position = (index / (gradientColors.length - 1)) * 100;
+                return `${color} ${position}%`;
+            }).join(', ');
+
+            const gradient = `linear-gradient(135deg, ${gradientStops})`;
+
+            document.documentElement.style.setProperty('--extracted-gradient', gradient);
+
+            setTimeout(() => {
+                document.body.classList.add('extracted');
+            }, 100);
+        }
+
+        function lightenColor(hex, percent) {
+            const num = parseInt(hex.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+        }
+
+        function darkenColor(hex, percent) {
+            const num = parseInt(hex.replace("#", ""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) - amt;
+            const G = (num >> 8 & 0x00FF) - amt;
+            const B = (num & 0x0000FF) - amt;
+            return "#" + (0x1000000 + (R > 255 ? 255 : R < 0 ? 0 : R) * 0x10000 +
+                (G > 255 ? 255 : G < 0 ? 0 : G) * 0x100 +
+                (B > 255 ? 255 : B < 0 ? 0 : B)).toString(16).slice(1);
+        }
+
+        function resetBackground() {
+            document.body.classList.remove('extracted');
+        }
+
+        function copyColor(hex, element) {
+            navigator.clipboard.writeText(hex).then(() => {
+                showNotification(updateText('colorCopied', {color: hex}));
+
+                const originalTransform = element.style.transform;
+                element.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    element.style.transform = originalTransform;
+                }, 150);
+            }).catch(() => {
+                const input = document.createElement('input');
+                input.value = hex;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showNotification(updateText('colorCopied', {color: hex}));
+            });
+        }
+
+        function copyAllColors() {
+            const hexColors = currentPaletteData.map(color => color.hex);
+            const colorText = hexColors.join(', ');
+
+            navigator.clipboard.writeText(colorText).then(() => {
+                showNotification(updateText('allColorsCopied', {count: hexColors.length}));
+            });
+        }
+
+        // Helper function to check if two palettes are identical
+        function arePalettesIdentical(palette1, palette2) {
+            if (palette1.length !== palette2.length) return false;
+
+            // Sort both palettes to compare regardless of order
+            const sorted1 = [...palette1].sort();
+            const sorted2 = [...palette2].sort();
+
+            return sorted1.every((color, index) => color === sorted2[index]);
+        }
+
+        function savePalette() {
+            if (currentPaletteData.length === 0) return;
+
+            const currentColors = currentPaletteData.map(c => c.hex);
+
+            // Check if this palette already exists
+            const existingPalette = savedPalettes.find(saved =>
+                arePalettesIdentical(currentColors, saved.colors)
+            );
+
+            if (existingPalette) {
+                showNotification(updateText('paletteAlreadyExists'), 'info');
+                return;
+            }
+
+            const palette = {
+                id: Date.now().toString(),
+                colors: currentColors,
+                timestamp: new Date().toLocaleDateString(),
+                colorData: currentPaletteData
+            };
+
+            savedPalettes.unshift(palette);
+            localStorage.setItem('colorPalettes', JSON.stringify(savedPalettes));
+            renderSavedPalettes();
+
+            showNotification(updateText('paletteSaved'));
+        }
+
+        function renderSavedPalettes() {
+            const savedGrid = document.getElementById('savedGrid');
+
+            if (savedPalettes.length === 0) {
+                savedPalettes_div.style.display = 'none';
+                return;
+            }
+
+            savedPalettes_div.style.display = 'block';
+            savedGrid.innerHTML = '';
+
+            savedPalettes.forEach(palette => {
+                const item = document.createElement('div');
+                item.className = 'saved-item';
+
+                const colorsHtml = palette.colors.map(color =>
+                    `<div class="saved-color" style="background-color: ${color}"></div>`
+                ).join('');
+
+                item.innerHTML = `
+                    <div class="saved-colors">${colorsHtml}</div>
+                    <div class="saved-date">${palette.timestamp}</div>
+                    <button class="remove-btn" onclick="removePalette('${palette.id}')">&times;</button>
+                `;
+
+                item.onclick = (e) => {
+                    if (e.target.classList.contains('remove-btn')) return;
+                    loadPalette(palette);
+                };
+
+                savedGrid.appendChild(item);
+            });
+        }
+
+        function loadPalette(palette) {
+            currentPalette = palette.colors;
+            currentPaletteData = palette.colorData;
+            displayPalette(palette.colorData);
+            paletteSection.style.display = 'block';
+            showNotification(updateText('paletteLoaded'));
+        }
+
+        function removePalette(id) {
+            savedPalettes = savedPalettes.filter(p => p.id !== id);
+            localStorage.setItem('colorPalettes', JSON.stringify(savedPalettes));
+            renderSavedPalettes();
+            showNotification(updateText('paletteRemoved'));
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+
+            notification.classList.remove('success', 'error', 'info');
+            notification.classList.add('show', type);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3500);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            currentLanguage = detectLanguage();
+            updateAllTexts();
+            renderSavedPalettes();
+        });
+    </script>
+</body>
+</html>
